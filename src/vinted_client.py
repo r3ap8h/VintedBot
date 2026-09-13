@@ -107,10 +107,17 @@ class VintedClient:
         page: int = 1,
         per_page: int = 48,
         order: str = "newest_first",
-        catalog_ids: str | None = None,
-        etat_ids: str | None = None,
+        filtres_bruts: dict[str, list[str]] | None = None,
     ) -> list[VintedItem]:
-        """Recherche des annonces et renvoie une liste de VintedItem (jamais None)."""
+        """Recherche des annonces et renvoie une liste de VintedItem (jamais None).
+
+        `filtres_bruts` transmet tels quels des filtres avances (catalog_ids,
+        brand_ids, status_ids, size_ids, color_ids, material_ids, ...) : chaque
+        cle est le nom du parametre attendu par l'API interne, chaque valeur une
+        liste d'ids (verifie en conditions reelles : l'API accepte les valeurs
+        multiples sous forme de liste separee par des virgules, ex.
+        `status_ids=2,3`).
+        """
         if not self._session_ready:
             self.init_session()
 
@@ -125,10 +132,10 @@ class VintedClient:
             params["price_from"] = prix_min
         if prix_max is not None:
             params["price_to"] = prix_max
-        if catalog_ids:
-            params["catalog_ids"] = catalog_ids
-        if etat_ids:
-            params["status_ids"] = etat_ids
+        if filtres_bruts:
+            for key, values in filtres_bruts.items():
+                if values:
+                    params[key] = ",".join(str(v) for v in values)
 
         response = self._get("/api/v2/catalog/items", params)
         return self._parse_items(response)

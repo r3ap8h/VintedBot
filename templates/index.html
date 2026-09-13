@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Recherches</h1>
+<p class="sous-titre">{{ recherches|length }} recherche(s) configuree(s).</p>
+
+<div class="carte">
+  {% if recherches %}
+  <table>
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Mots-cles / filtres</th>
+        <th>Prix</th>
+        <th>Intervalle</th>
+        <th>Webhook</th>
+        <th>Etat</th>
+        <th>Derniere activite</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in recherches %}
+      <tr>
+        <td>{{ r.search.nom }}<br><span class="aide">{{ r.search.id }}</span></td>
+        <td>
+          '{{ r.search.mots_cles or '(aucun)' }}'
+          {% if r.filtres_resume %}<br><span class="filtres-resume">{{ r.filtres_resume }}</span>{% endif %}
+        </td>
+        <td>
+          {% if r.search.prix_min %}{{ r.search.prix_min }} {% endif %}
+          {% if r.search.prix_max %}- {{ r.search.prix_max }}{% endif %}
+          {% if not r.search.prix_min and not r.search.prix_max %}sans limite{% endif %}
+          {{ r.search.devise }}
+        </td>
+        <td>{{ r.search.intervalle_minutes }} min</td>
+        <td>{{ r.webhook_masque }}</td>
+        <td>
+          {% if r.search.actif %}<span class="badge badge-actif">actif</span>
+          {% else %}<span class="badge badge-inactif">inactif</span>{% endif %}
+        </td>
+        <td>{{ r.derniere_activite or "jamais verifiee" }}</td>
+        <td>
+          <div class="actions">
+            <a class="btn btn-petit" href="/searches/{{ r.search.id }}/edit">Modifier</a>
+            <form class="inline" method="post" action="/searches/{{ r.search.id }}/toggle">
+              <button class="btn btn-petit" type="submit">{{ "Desactiver" if r.search.actif else "Activer" }}</button>
+            </form>
+            <a class="btn btn-petit btn-danger" href="/searches/{{ r.search.id }}/delete">Supprimer</a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>Aucune recherche pour l'instant. <a href="/searches/new">Ajoutes-en une</a>.</p>
+  {% endif %}
+</div>
+{% endblock %}

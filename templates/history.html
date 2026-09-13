@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Historique recent</h1>
+<p class="sous-titre">Dernieres annonces enregistrees (toutes recherches confondues), pour verifier que tout tourne sans avoir a checker Discord.</p>
+
+<div class="carte">
+  {% if items %}
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Recherche</th><th>Annonce</th><th>Prix</th></tr>
+    </thead>
+    <tbody>
+      {% for it in items %}
+      <tr>
+        <td>{{ it.first_seen_at }}</td>
+        <td>{{ it.search_nom }}</td>
+        <td>{{ it.title }}</td>
+        <td>{{ it.price }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>Aucune annonce enregistree pour l'instant.</p>
+  {% endif %}
+</div>
+{% endblock %}

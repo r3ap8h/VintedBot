@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Webhooks Discord</h1>
+<p class="sous-titre">Le webhook complet n'est jamais affiche en clair ici.</p>
+
+<div class="carte">
+  <h2 style="margin-top:0;">Webhook global (.env)</h2>
+  {% if webhook_global_masque %}
+    <p>{{ webhook_global_masque }}</p>
+    <form method="post" action="/webhooks/test">
+      <input type="hidden" name="cible" value="global">
+      <button class="btn" type="submit">Envoyer un message de test</button>
+    </form>
+  {% else %}
+    <p class="aide">Aucun DISCORD_WEBHOOK_URL configure dans .env.</p>
+  {% endif %}
+</div>
+
+<div class="carte">
+  <h2 style="margin-top:0;">Webhooks dedies par recherche</h2>
+  {% if recherches_avec_webhook %}
+  <table>
+    <thead><tr><th>Recherche</th><th>Webhook</th><th></th></tr></thead>
+    <tbody>
+      {% for r in recherches_avec_webhook %}
+      <tr>
+        <td>{{ r.search.nom }}</td>
+        <td>{{ r.webhook_masque }}</td>
+        <td>
+          <form method="post" action="/webhooks/test">
+            <input type="hidden" name="cible" value="search:{{ r.search.id }}">
+            <button class="btn btn-petit" type="submit">Tester</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="aide">Aucune recherche n'utilise de webhook dedie pour l'instant — elles utilisent toutes le webhook global.</p>
+  {% endif %}
+</div>
+{% endblock %}

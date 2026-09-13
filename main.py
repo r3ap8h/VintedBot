@@ -10,7 +10,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from src.cli import CLI_COMMANDS, build_parser
-from src.notifier import DiscordNotifier
 from src.scheduler import run_forever
 from src.searches import load_searches
 from src.storage import init_db
@@ -50,16 +49,14 @@ def main() -> None:
         )
         sys.exit(1)
 
-    notifier = DiscordNotifier(webhook_url)
-    searches = load_searches()
-    if not searches:
+    if not load_searches():
         logging.warning(
             "Aucune recherche dans config/searches.json. Utilise 'python main.py add "
-            "--nom ... --mots-cles ...' pour en ajouter une."
+            "--nom ... --mots-cles ...' (ou l'interface web) pour en ajouter une."
         )
         return
 
-    run_forever(searches, notifier)
+    run_forever(webhook_url)
 
 
 if __name__ == "__main__":

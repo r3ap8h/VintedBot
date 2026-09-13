@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Supprimer une recherche</h1>
+<div class="carte">
+  <p>Es-tu sur de vouloir supprimer definitivement la recherche <strong>{{ search.nom }}</strong> ({{ search.id }}) ?</p>
+  <p class="aide">Les annonces deja notifiees pour cette recherche resteront dans l'historique.</p>
+  <form method="post" action="/searches/{{ search.id }}/delete" style="display:flex; gap:8px;">
+    <button class="btn btn-danger" type="submit">Oui, supprimer</button>
+    <a class="btn" href="/">Annuler</a>
+  </form>
+</div>
+{% endblock %}

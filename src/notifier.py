@@ -14,17 +14,34 @@ logger = logging.getLogger("vinted_watcher.notifier")
 _COULEUR_EMBED = 0x09B1BA  # bleu-vert Vinted
 
 
+def mask_webhook_url(url: str | None) -> str:
+    """Tronque une URL de webhook pour affichage (jamais le webhook complet en clair)."""
+    if not url:
+        return "(webhook global)"
+    marqueur = "/webhooks/"
+    if marqueur in url:
+        prefixe, _, reste = url.partition(marqueur)
+        identifiant = reste.split("/")[0]
+        return f"{prefixe}{marqueur}{identifiant[:4]}.../***"
+    return url[:20] + "..."
+
+
 class Notifier(ABC):
     @abstractmethod
-    def notify(self, item: VintedItem, search_nom: str) -> None:
-        """Notifie qu'une nouvelle annonce correspond a la recherche donnee."""
+    def notify(self, item: VintedItem, search_nom: str) -> bool:
+        """Notifie qu'une nouvelle annonce correspond a la recherche donnee.
+
+        Renvoie True en cas de succes, False sinon (l'appelant du scheduler
+        ignore la valeur de retour, mais elle sert a l'interface web pour
+        afficher le resultat d'un test de webhook).
+        """
 
 
 class DiscordNotifier(Notifier):
     def __init__(self, webhook_url: str) -> None:
         self.webhook_url = webhook_url
 
-    def notify(self, item: VintedItem, search_nom: str) -> None:
+    def notify(self, item: VintedItem, search_nom: str) -> bool:
         fields = []
         if item.brand:
             fields.append({"name": "Marque", "value": item.brand, "inline": True})
@@ -49,8 +66,10 @@ class DiscordNotifier(Notifier):
         try:
             response = requests.post(self.webhook_url, json=payload, timeout=10)
             response.raise_for_status()
+            return True
         except requests.RequestException as exc:
             logger.error("Echec de l'envoi de la notification Discord pour '%s' : %s", item.title, exc)
+            return False
 
 
 class WebNotifier(Notifier):
@@ -64,5 +83,5 @@ class WebNotifier(Notifier):
     def __init__(self) -> None:
         raise NotImplementedError("WebNotifier sera implemente en V2.")
 
-    def notify(self, item: VintedItem, search_nom: str) -> None:
+    def notify(self, item: VintedItem, search_nom: str) -> bool:
         raise NotImplementedError

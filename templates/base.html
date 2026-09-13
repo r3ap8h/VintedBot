@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Vinted Watcher{% if titre %} — {{ titre }}{% endif %}</title>
+  <style>
+    :root {
+      --couleur-accent: #09b1ba;
+      --couleur-fond: #f7f8f9;
+      --couleur-carte: #ffffff;
+      --couleur-texte: #1f2933;
+      --couleur-texte-att: #6b7280;
+      --couleur-bordure: #e2e5e9;
+      --couleur-danger: #d64545;
+      --couleur-ok: #1c8a4b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--couleur-fond);
+      color: var(--couleur-texte);
+    }
+    header {
+      background: var(--couleur-carte);
+      border-bottom: 1px solid var(--couleur-bordure);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    header .logo { font-weight: 700; color: var(--couleur-accent); font-size: 1.1rem; }
+    header nav a {
+      color: var(--couleur-texte);
+      text-decoration: none;
+      margin-right: 16px;
+      font-size: 0.95rem;
+    }
+    header nav a:hover { color: var(--couleur-accent); }
+    main { max-width: 1000px; margin: 24px auto; padding: 0 24px; }
+    h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    .sous-titre { color: var(--couleur-texte-att); margin-top: 0; margin-bottom: 20px; font-size: 0.9rem; }
+    .carte {
+      background: var(--couleur-carte);
+      border: 1px solid var(--couleur-bordure);
+      border-radius: 8px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--couleur-bordure); vertical-align: top; }
+    th { color: var(--couleur-texte-att); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+    .badge-actif { background: #e4f7ec; color: var(--couleur-ok); }
+    .badge-inactif { background: #f1f2f4; color: var(--couleur-texte-att); }
+    .btn {
+      display: inline-block;
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--couleur-bordure);
+      background: var(--couleur-carte);
+      color: var(--couleur-texte);
+      text-decoration: none;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .btn-accent { background: var(--couleur-accent); border-color: var(--couleur-accent); color: white; }
+    .btn-danger { background: var(--couleur-danger); border-color: var(--couleur-danger); color: white; }
+    .btn-petit { padding: 4px 10px; font-size: 0.78rem; }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    form.inline { display: inline; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin: 12px 0 4px; }
+    input[type=text], input[type=number], input[type=url], textarea, select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--couleur-bordure);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .aide { color: var(--couleur-texte-att); font-size: 0.8rem; margin-top: 3px; }
+    .flash { padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 0.9rem; }
+    .flash-ok { background: #e4f7ec; color: var(--couleur-ok); }
+    .flash-erreur { background: #fbe9e9; color: var(--couleur-danger); }
+    .onglets { display: flex; gap: 8px; margin-bottom: 16px; }
+    .onglet { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--couleur-bordure); cursor: pointer; background: var(--couleur-carte); font-size: 0.85rem; }
+    .onglet.actif { background: var(--couleur-accent); color: white; border-color: var(--couleur-accent); }
+    .filtres-resume { font-family: monospace; font-size: 0.8rem; color: var(--couleur-texte-att); }
+    .avertissement { background: #fff6e0; border: 1px solid #f0d78c; color: #8a6d1f; padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 18px; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="logo">Vinted Watcher</span>
+    <nav>
+      <a href="/">Recherches</a>
+      <a href="/searches/new">Ajouter</a>
+      <a href="/webhooks">Webhooks</a>
+      <a href="/history">Historique</a>
+    </nav>
+  </header>
+  <main>
+    {% if flash %}
+      <div class="flash flash-{{ flash.type }}">{{ flash.message }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

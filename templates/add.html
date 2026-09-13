@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Ajouter une recherche</h1>
+
+<div class="onglets">
+  <a class="onglet {{ 'actif' if mode == 'simple' else '' }}" href="/searches/new?mode=simple">Simple</a>
+  <a class="onglet {{ 'actif' if mode == 'url' else '' }}" href="/searches/new?mode=url">Depuis une URL Vinted</a>
+</div>
+
+{% if mode == 'simple' %}
+<div class="carte">
+  <form method="post" action="/searches/new/simple">
+    <label for="nom">Nom de la recherche</label>
+    <input type="text" id="nom" name="nom" required value="{{ form.nom or '' }}">
+
+    <label for="mots_cles">Mots-cles</label>
+    <input type="text" id="mots_cles" name="mots_cles" required value="{{ form.mots_cles or '' }}">
+
+    <label for="prix_min">Prix minimum (optionnel)</label>
+    <input type="number" step="0.01" id="prix_min" name="prix_min" value="{{ form.prix_min or '' }}">
+
+    <label for="prix_max">Prix maximum (optionnel)</label>
+    <input type="number" step="0.01" id="prix_max" name="prix_max" value="{{ form.prix_max or '' }}">
+
+    <label for="intervalle_minutes">Intervalle de verification (minutes, min. 1)</label>
+    <input type="number" min="1" id="intervalle_minutes" name="intervalle_minutes" value="{{ form.intervalle_minutes or 3 }}">
+
+    <label for="webhook">Webhook Discord pour cette recherche (optionnel)</label>
+    <input type="url" id="webhook" name="webhook" placeholder="laisser vide pour utiliser le webhook global" value="{{ form.webhook or '' }}">
+
+    <p style="margin-top:20px;">
+      <button class="btn btn-accent" type="submit">Ajouter la recherche</button>
+    </p>
+  </form>
+</div>
+{% else %}
+
+<div class="carte">
+  <form method="post" action="/searches/preview-url">
+    <label for="nom">Nom de la recherche</label>
+    <input type="text" id="nom" name="nom" required value="{{ form.nom or '' }}">
+
+    <label for="url">URL de recherche/catalogue copiee sur vinted.fr</label>
+    <textarea id="url" name="url" rows="3" required placeholder="https://www.vinted.fr/catalog?search_text=...">{{ form.url or '' }}</textarea>
+    <p class="aide">Construis ta recherche sur le site (categorie, prix, etat, marque...) puis colle l'URL finale ici.</p>
+
+    <label for="intervalle_minutes">Intervalle de verification (minutes, min. 1)</label>
+    <input type="number" min="1" id="intervalle_minutes" name="intervalle_minutes" value="{{ form.intervalle_minutes or 3 }}">
+
+    <label for="webhook">Webhook Discord pour cette recherche (optionnel)</label>
+    <input type="url" id="webhook" name="webhook" placeholder="laisser vide pour utiliser le webhook global" value="{{ form.webhook or '' }}">
+
+    <p style="margin-top:20px;">
+      <button class="btn btn-accent" type="submit">Analyser l'URL</button>
+    </p>
+  </form>
+</div>
+
+{% if erreur %}
+<div class="flash flash-erreur">{{ erreur }}</div>
+{% endif %}
+
+{% if preview %}
+<div class="carte">
+  <h2 style="margin-top:0;">Apercu des filtres detectes</h2>
+  <table>
+    <tr><th>Mots-cles</th><td>{{ preview.mots_cles or "(aucun, recherche basee uniquement sur les filtres)" }}</td></tr>
+    <tr><th>Prix min</th><td>{{ preview.prix_min if preview.prix_min is not none else "aucun" }}</td></tr>
+    <tr><th>Prix max</th><td>{{ preview.prix_max if preview.prix_max is not none else "aucun" }}</td></tr>
+    <tr><th>Devise</th><td>{{ preview.devise }}</td></tr>
+    <tr>
+      <th>Filtres avances</th>
+      <td>
+        {% if preview.filtres_bruts %}
+          <ul style="margin:0; padding-left:18px;">
+          {% for cle, valeurs in preview.filtres_bruts.items() %}
+            <li><code>{{ cle }}</code> = {{ valeurs|join(', ') }}</li>
+          {% endfor %}
+          </ul>
+        {% else %}
+          aucun
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <form method="post" action="/searches/new/from-url" style="margin-top:16px;">
+    <input type="hidden" name="nom" value="{{ form.nom }}">
+    <input type="hidden" name="url" value="{{ form.url }}">
+    <input type="hidden" name="intervalle_minutes" value="{{ form.intervalle_minutes or 3 }}">
+    <input type="hidden" name="webhook" value="{{ form.webhook or '' }}">
+    <button class="btn btn-accent" type="submit">Confirmer et ajouter la recherche</button>
+  </form>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

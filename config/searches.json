@@ -8,7 +8,7 @@
     "devise": "EUR",
     "actif": true,
     "intervalle_minutes": 3,
-    "catalog_ids": null,
-    "etat_ids": null
+    "filtres_bruts": {},
+    "webhook_url": null
   }
 ]

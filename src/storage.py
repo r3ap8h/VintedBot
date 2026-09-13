@@ -70,3 +70,36 @@ def is_search_known(search_id: str) -> bool:
             "SELECT 1 FROM seen_items WHERE search_id = ? LIMIT 1", (search_id,)
         ).fetchone()
     return row is not None
+
+
+def get_last_seen_at(search_id: str) -> str | None:
+    """Date de la derniere annonce enregistree pour cette recherche (approximation de son activite)."""
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT MAX(first_seen_at) FROM seen_items WHERE search_id = ?", (search_id,)
+        ).fetchone()
+    return row[0] if row else None
+
+
+def get_recent(limit: int = 50) -> list[dict]:
+    """Dernieres annonces enregistrees, toutes recherches confondues (pour l'historique)."""
+    with _connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT search_id, item_id, title, price, first_seen_at
+            FROM seen_items
+            ORDER BY first_seen_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+    return [
+        {
+            "search_id": r[0],
+            "item_id": r[1],
+            "title": r[2],
+            "price": r[3],
+            "first_seen_at": r[4],
+        }
+        for r in rows
+    ]
