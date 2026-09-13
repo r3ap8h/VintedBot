@@ -1,0 +1,14 @@
+[
+  {
+    "id": "gopro13",
+    "nom": "GoPro Hero 13",
+    "mots_cles": "gopro hero 13",
+    "prix_min": null,
+    "prix_max": 200,
+    "devise": "EUR",
+    "actif": true,
+    "intervalle_minutes": 3,
+    "catalog_ids": null,
+    "etat_ids": null
+  }
+]
