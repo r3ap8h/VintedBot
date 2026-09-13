@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from urllib.parse import urljoin
 
 import requests
@@ -56,6 +56,9 @@ class VintedItem:
     size: str | None = None
     status: str | None = None
     photo_url: str | None = None
+    photos: list[str] = field(default_factory=list)
+    total_price: float | None = None
+    total_currency: str | None = None
     url: str = ""
     seller: str | None = None
 
@@ -196,16 +199,48 @@ class VintedClient:
                 logger.warning("Annonce ignorée (champ inattendu) : %s", exc)
         return items
 
-    def _to_item(self, raw: dict) -> VintedItem:
-        price_raw = raw.get("price")
-        if isinstance(price_raw, dict):
-            price = float(price_raw.get("amount", 0))
-            currency = price_raw.get("currency_code", "EUR")
-        else:
-            price = float(price_raw or 0)
-            currency = raw.get("currency", "EUR")
+    @staticmethod
+    def _extract_montant(raw_price, devise_defaut: str = "EUR") -> tuple[float, str] | None:
+        """Lit un champ prix de l'API (`price`, `total_item_price`...), tolerant au format.
 
-        photo = raw.get("photo") or {}
+        Ces champs arrivent sous forme d'objet `{amount: "9.1", currency_code: "EUR"}`
+        (amount est une chaine, pas un nombre) mais on tolere aussi un scalaire brut
+        au cas ou l'API change de forme.
+        """
+        if raw_price is None:
+            return None
+        if isinstance(raw_price, dict):
+            montant = raw_price.get("amount")
+            if montant is None:
+                return None
+            return float(montant), raw_price.get("currency_code", devise_defaut)
+        return float(raw_price), devise_defaut
+
+    @staticmethod
+    def _extract_photos(raw: dict) -> list[str]:
+        """Toutes les photos d'une annonce, deja presentes dans la reponse de recherche
+
+        (champ `photos`, liste) : aucun appel supplementaire a l'API n'est necessaire.
+        """
+        photos: list[str] = []
+        for photo in raw.get("photos") or []:
+            if not isinstance(photo, dict):
+                continue
+            url = photo.get("full_size_url") or photo.get("url")
+            if url:
+                photos.append(url)
+        if not photos:
+            single = raw.get("photo") or {}
+            url = single.get("full_size_url") or single.get("url")
+            if url:
+                photos.append(url)
+        return photos
+
+    def _to_item(self, raw: dict) -> VintedItem:
+        prix = self._extract_montant(raw.get("price")) or (0.0, raw.get("currency", "EUR"))
+        total = self._extract_montant(raw.get("total_item_price"))
+
+        photos = self._extract_photos(raw)
         url = raw.get("url") or ""
         if url and not url.startswith("http"):
             url = urljoin(self.base_url, url)
@@ -215,12 +250,15 @@ class VintedClient:
         return VintedItem(
             id=int(raw["id"]),
             title=raw.get("title") or "Sans titre",
-            price=price,
-            currency=currency,
+            price=prix[0],
+            currency=prix[1],
             brand=raw.get("brand_title"),
             size=raw.get("size_title"),
             status=raw.get("status"),
-            photo_url=photo.get("url"),
+            photo_url=photos[0] if photos else None,
+            photos=photos,
+            total_price=total[0] if total else None,
+            total_currency=total[1] if total else None,
             url=url,
             seller=user.get("login"),
         )

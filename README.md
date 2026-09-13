@@ -51,10 +51,20 @@ webhook (bouton "Copier l'URL du webhook") dans `.env`.
 
 ## Configurer une recherche
 
-Un exemple est déjà prêt dans `config/searches.json` (GoPro Hero 13, max
-200€, vérifiée toutes les 3 minutes). Tu peux le modifier à la main, passer par
-la CLI, ou par l'**interface web** (voir plus bas) — les trois partagent le
-même fichier de config.
+`config/searches.json` contient tes recherches (y compris d'éventuels
+webhooks Discord dédiés par recherche) : ce fichier est **ignoré par git**
+(voir `.gitignore`) pour ne jamais exposer un webhook si tu pousses ce projet
+sur un dépôt public. Un modèle neutre est fourni dans
+`config/searches.example.json` (GoPro Hero 13, max 200€, vérifiée toutes les
+3 minutes) — copie-le en `config/searches.json` pour démarrer :
+
+```powershell
+copy config\searches.example.json config\searches.json
+```
+
+Tu peux ensuite modifier `config/searches.json` à la main, passer par la CLI,
+ou par l'**interface web** (voir plus bas) — les trois partagent le même
+fichier de config.
 
 ### Recherche simple (mots-clés + prix)
 
@@ -66,17 +76,15 @@ python main.py enable gopro13
 python main.py remove gopro13
 ```
 
-### Recherche avancée (catégorie, marque, état, taille, couleur...)
+### Recherche avancée (catégorie via URL Vinted)
 
-Vinted n'a pas de table stable "nom de filtre → id" (les marques seules
-représentent des milliers d'ids). La methode fiable : construis ta recherche
-directement sur **vinted.fr** avec les filtres normaux du site (catégorie,
-prix, état, marque, taille, couleur...), puis copie l'URL résultante dans la
-barre d'adresse une fois les filtres appliqués. Le programme la parse
+Pour une catégorie precise (`catalog_ids`), la methode fiable reste de
+construire ta recherche directement sur **vinted.fr** avec les filtres du
+site, puis de copier l'URL résultante. Le programme la parse
 automatiquement :
 
 ```powershell
-python main.py add-url --nom "Nike Air Max Homme" --url "https://www.vinted.fr/catalog?search_text=air+max&catalog[]=1238&price_to=80&status_ids[]=2&brand_ids[]=53" --intervalle-minutes 3
+python main.py add-url --nom "Nike Air Max Homme" --url "https://www.vinted.fr/catalog?search_text=air+max&catalog[]=1238&price_to=80" --intervalle-minutes 3
 ```
 
 La commande affiche un résumé de ce qui a été compris (mots-clés, prix,
@@ -84,6 +92,37 @@ filtres avancés détectés) pour que tu puisses vérifier avant de laisser
 tourner la surveillance. Ajoute `--webhook <url>` à `add` ou `add-url` pour
 donner un webhook Discord dédié à cette recherche (sinon elle utilise le
 webhook global de `.env`).
+
+### Critères de filtrage texte (état, marque, taille, terme obligatoire...)
+
+Vinted n'a pas de table stable "nom de filtre → id" pour l'état, la marque ou
+la taille (non documenté, changeant sans préavis). Plutôt que de dépendre de
+ces ids (`status_ids`, `brand_ids`, `size_ids`...), le programme **filtre côté
+application** en comparant les champs texte lisibles renvoyés par l'API
+(`status`, `brand_title`, `size_title`) aux critères que tu définis — un
+critère non renseigné ne filtre rien.
+
+Critères disponibles, combinables entre eux :
+
+- **Terme obligatoire** : doit apparaître dans le titre de l'annonce.
+- **Termes optionnels** : juste indicatifs, élargissent la requête envoyée à
+  Vinted mais n'excluent jamais une annonce.
+- **État** : un ou plusieurs des 5 niveaux Vinted (Neuf avec étiquette, Neuf
+  sans étiquette, Très bon état, Bon état, Satisfaisant).
+- **Marque** : texte libre, ou `--sans-marque` pour cibler les annonces sans
+  marque renseignée.
+- **Taille / format** : texte libre.
+
+```powershell
+python main.py add --nom "Robes Zara TBE" --mots-cles "" --terme-obligatoire "robe" --termes-optionnels "fleurie, longue" --etat "Très bon état" --etat "Bon état" --marque "Zara" --taille "M"
+```
+
+⚠️ **Couleur, matière et motif ne sont pas gérés** : vérifié en conditions
+réelles, ces informations ne sont disponibles ni dans la réponse de recherche
+(`GET /api/v2/catalog/items`), ni dans le détail d'une annonce (l'endpoint
+`/api/v2/items/{id}` renvoie 404 avec une session anonyme). Les ajouter
+nécessiterait de dépendre d'ids Vinted non documentés, ce que ce projet évite
+volontairement.
 
 ## Test manuel (sans Discord)
 
@@ -143,10 +182,19 @@ python main.py
 
 Le programme tourne indéfiniment, vérifie chaque recherche active à son
 intervalle configuré (avec un peu de hasard pour désynchroniser les appels),
-et poste une notification Discord pour chaque nouvelle annonce détectée. À la
-toute première vérification d'une recherche, les annonces déjà existantes sont
+et poste une notification Discord pour chaque nouvelle annonce qui passe les
+critères de la recherche (texte + critères texte, voir plus haut). À la toute
+première vérification d'une recherche, les annonces déjà existantes sont
 enregistrées **sans notification** (pour ne pas spammer Discord avec tout
-l'historique) ; seules les nouveautés suivantes déclenchent une alerte.
+l'historique) ; seules les nouveautés suivantes déclenchent une alerte. Les
+annonces reçues qui ne passent pas les critères texte sont tout de même
+enregistrées (pour ne pas être ré-analysées), mais ne notifient jamais.
+
+La notification Discord affiche le prix demandé et, quand Vinted le fournit,
+le prix total avec la protection acheteur (hors frais de livraison, non
+connus avant le paiement), un bouton "Voir l'annonce sur Vinted" en plus du
+titre cliquable, et jusqu'à 4 photos regroupées en galerie quand l'annonce en
+a plusieurs.
 
 Arrêt propre avec `Ctrl+C`.
 
@@ -175,7 +223,8 @@ vinted-watcher/
 ├── requirements.txt
 ├── README.md
 ├── config/
-│   └── searches.json       # recherches définies par l'utilisateur
+│   ├── searches.example.json  # modele neutre, sans webhook
+│   └── searches.json       # recherches definies par l'utilisateur (ignore par git)
 ├── data/
 │   └── seen_items.db       # SQLite, créé automatiquement
 ├── templates/               # pages HTML de l'interface web (Jinja2)
@@ -185,6 +234,7 @@ vinted-watcher/
 │   ├── storage.py          # SQLite : annonces déjà vues, historique
 │   ├── notifier.py         # Notifier (interface) + DiscordNotifier + masquage webhook
 │   ├── searches.py         # chargement/validation/écriture atomique des recherches
+│   ├── filtres_texte.py    # filtrage cote application (etat/marque/taille/terme obligatoire)
 │   ├── scheduler.py        # boucle principale, rechargement a chaud, cache de webhooks
 │   ├── cli.py              # add / add-url / list / enable / disable / remove
 │   └── webapp.py           # interface web locale (FastAPI)

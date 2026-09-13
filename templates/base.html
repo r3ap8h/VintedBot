@@ -47,8 +47,10 @@
       padding: 18px 20px;
       margin-bottom: 18px;
     }
+    .table-scroll { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--couleur-bordure); vertical-align: top; }
+    .casse-mot { overflow-wrap: anywhere; }
     th { color: var(--couleur-texte-att); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
     .badge-actif { background: #e4f7ec; color: var(--couleur-ok); }
@@ -85,6 +87,9 @@
     .onglet { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--couleur-bordure); cursor: pointer; background: var(--couleur-carte); font-size: 0.85rem; }
     .onglet.actif { background: var(--couleur-accent); color: white; border-color: var(--couleur-accent); }
     .filtres-resume { font-family: monospace; font-size: 0.8rem; color: var(--couleur-texte-att); }
+    .cases { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 4px; }
+    .case { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 400; margin: 0; }
+    .case input[type=checkbox] { width: auto; }
     .avertissement { background: #fff6e0; border: 1px solid #f0d78c; color: #8a6d1f; padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 18px; }
   </style>
 </head>

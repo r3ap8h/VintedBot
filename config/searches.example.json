@@ -9,6 +9,11 @@
     "actif": true,
     "intervalle_minutes": 3,
     "filtres_bruts": {},
-    "webhook_url": null
+    "webhook_url": null,
+    "terme_obligatoire": null,
+    "termes_optionnels": [],
+    "etats": [],
+    "marque": null,
+    "taille": null
   }
 ]

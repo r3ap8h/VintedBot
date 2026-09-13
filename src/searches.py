@@ -16,6 +16,18 @@ logger = logging.getLogger("vinted_watcher.searches")
 DEFAULT_SEARCHES_PATH = "config/searches.json"
 MIN_INTERVALLE_MINUTES = 1
 
+# Les 5 niveaux d'etat Vinted, tels qu'affiches sur le site (libelles exacts
+# retournes par l'API dans le champ texte `status` de chaque annonce).
+ETATS_VINTED = [
+    "Neuf avec étiquette",
+    "Neuf sans étiquette",
+    "Très bon état",
+    "Bon état",
+    "Satisfaisant",
+]
+
+SANS_MARQUE = "Sans marque"
+
 
 @dataclass
 class Search:
@@ -29,6 +41,14 @@ class Search:
     intervalle_minutes: int = 3
     filtres_bruts: dict[str, list[str]] = field(default_factory=dict)
     webhook_url: str | None = None
+    # Criteres de filtrage texte, appliques cote application sur les champs lisibles
+    # renvoyes par l'API (voir src/filtres_texte.py) : aucun ne depend d'un id Vinted
+    # non documente (status_ids, brand_ids, size_ids...).
+    terme_obligatoire: str | None = None
+    termes_optionnels: list[str] = field(default_factory=list)
+    etats: list[str] = field(default_factory=list)
+    marque: str | None = None
+    taille: str | None = None
 
     def __post_init__(self) -> None:
         # Garde-fou : ne jamais verifier une recherche plus souvent qu'une fois par minute.
@@ -47,6 +67,52 @@ def summarize_filtres(filtres: dict[str, list[str]]) -> str:
     if not filtres:
         return ""
     return ", ".join(f"{cle}={','.join(valeurs)}" for cle, valeurs in filtres.items())
+
+
+def parse_termes_optionnels(brut: str) -> list[str]:
+    """Convertit une chaine 'mot1, mot2 , mot3' (CLI ou formulaire web) en liste propre."""
+    return [t.strip() for t in brut.split(",") if t.strip()]
+
+
+def build_search_text(search: Search) -> str:
+    """Texte envoye a `VintedClient.search()` (parametre `search_text` de l'API).
+
+    Combine `mots_cles` (retro-compatibilite avec les recherches simples/URL
+    existantes), `terme_obligatoire` et `termes_optionnels`, en dedupliquant les
+    mots pour ne pas envoyer une requete redondante. Sans nouveaux criteres
+    definis, une recherche existante (ex: "gopro hero 13") produit exactement le
+    meme `search_text` qu'avant : aucune regression.
+    """
+    parties = [search.mots_cles or ""]
+    if search.terme_obligatoire:
+        parties.append(search.terme_obligatoire)
+    parties.extend(search.termes_optionnels)
+
+    vus: set[str] = set()
+    mots: list[str] = []
+    for partie in parties:
+        for mot in partie.split():
+            cle = mot.lower()
+            if cle not in vus:
+                vus.add(cle)
+                mots.append(mot)
+    return " ".join(mots)
+
+
+def summarize_criteres_texte(search: Search) -> str:
+    """Resume lisible des criteres de filtrage texte actifs sur une recherche."""
+    parties = []
+    if search.terme_obligatoire:
+        parties.append(f"terme obligatoire: {search.terme_obligatoire}")
+    if search.termes_optionnels:
+        parties.append(f"termes optionnels: {', '.join(search.termes_optionnels)}")
+    if search.etats:
+        parties.append(f"etat: {', '.join(search.etats)}")
+    if search.marque:
+        parties.append(f"marque: {search.marque}")
+    if search.taille:
+        parties.append(f"taille: {search.taille}")
+    return " | ".join(parties)
 
 
 def _migrate_raw(raw: dict) -> tuple[dict, bool]:
@@ -159,9 +225,14 @@ def add_search(
     devise: str = "EUR",
     intervalle_minutes: int = 3,
     webhook_url: str | None = None,
+    terme_obligatoire: str | None = None,
+    termes_optionnels: list[str] | None = None,
+    etats: list[str] | None = None,
+    marque: str | None = None,
+    taille: str | None = None,
     path: str = DEFAULT_SEARCHES_PATH,
 ) -> Search:
-    """Cree une recherche simple (mots-cles + prix), sans filtres avances."""
+    """Cree une recherche simple (mots-cles + prix + criteres texte optionnels)."""
     searches = load_searches(path)
     search = Search(
         id=_generate_id(nom, searches),
@@ -172,6 +243,11 @@ def add_search(
         devise=devise,
         intervalle_minutes=intervalle_minutes,
         webhook_url=webhook_url or None,
+        terme_obligatoire=terme_obligatoire or None,
+        termes_optionnels=termes_optionnels or [],
+        etats=etats or [],
+        marque=marque or None,
+        taille=taille or None,
     )
     searches.append(search)
     save_searches(searches, path)

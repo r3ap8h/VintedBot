@@ -23,11 +23,15 @@ from fastapi.templating import Jinja2Templates
 
 from .notifier import DiscordNotifier, mask_webhook_url
 from .searches import (
+    ETATS_VINTED,
+    SANS_MARQUE,
     add_search,
     add_search_from_url,
     get_search,
     load_searches,
+    parse_termes_optionnels,
     remove_search,
+    summarize_criteres_texte,
     summarize_filtres,
     update_search,
 )
@@ -68,9 +72,16 @@ def _enrichir_recherche(search) -> dict:
     return {
         "search": search,
         "filtres_resume": summarize_filtres(search.filtres_bruts),
+        "criteres_texte": summarize_criteres_texte(search),
         "webhook_masque": mask_webhook_url(search.webhook_url) if search.webhook_url else "(webhook global)",
         "derniere_activite": get_last_seen_at(search.id),
     }
+
+
+def _marque_depuis_formulaire(marque: str, sans_marque: str) -> str | None:
+    if sans_marque:
+        return SANS_MARQUE
+    return marque.strip() or None
 
 
 @app.get("/")
@@ -89,7 +100,14 @@ def new_search_form(request: Request, mode: str = "simple"):
     return templates.TemplateResponse(
         request,
         "add.html",
-        {"mode": mode, "form": {}, "preview": None, "erreur": None, "flash": _flash_from_query(request)},
+        {
+            "mode": mode,
+            "form": {},
+            "preview": None,
+            "erreur": None,
+            "etats_vinted": ETATS_VINTED,
+            "flash": _flash_from_query(request),
+        },
     )
 
 
@@ -101,6 +119,12 @@ def create_simple_search(
     prix_max: float | None = Form(None),
     intervalle_minutes: int = Form(3),
     webhook: str = Form(""),
+    terme_obligatoire: str = Form(""),
+    termes_optionnels: str = Form(""),
+    etats: list[str] = Form([]),
+    marque: str = Form(""),
+    sans_marque: str = Form(""),
+    taille: str = Form(""),
 ):
     search = add_search(
         nom=nom,
@@ -109,6 +133,11 @@ def create_simple_search(
         prix_max=prix_max,
         intervalle_minutes=intervalle_minutes,
         webhook_url=webhook.strip() or None,
+        terme_obligatoire=terme_obligatoire.strip() or None,
+        termes_optionnels=parse_termes_optionnels(termes_optionnels),
+        etats=etats,
+        marque=_marque_depuis_formulaire(marque, sans_marque),
+        taille=taille.strip() or None,
     )
     return _redirect_with_flash("/", f"Recherche '{search.nom}' ajoutee.")
 
@@ -171,6 +200,9 @@ def edit_search_form(request: Request, search_id: str):
             "search": search,
             "filtres_resume": summarize_filtres(search.filtres_bruts),
             "webhook_masque": mask_webhook_url(search.webhook_url) if search.webhook_url else "(webhook global)",
+            "etats_vinted": ETATS_VINTED,
+            "termes_optionnels_str": ", ".join(search.termes_optionnels),
+            "sans_marque_coche": search.marque == SANS_MARQUE,
             "flash": _flash_from_query(request),
         },
     )
@@ -186,6 +218,12 @@ def edit_search_submit(
     intervalle_minutes: int = Form(3),
     webhook: str = Form(""),
     actif: str = Form("true"),
+    terme_obligatoire: str = Form(""),
+    termes_optionnels: str = Form(""),
+    etats: list[str] = Form([]),
+    marque: str = Form(""),
+    sans_marque: str = Form(""),
+    taille: str = Form(""),
 ):
     try:
         update_search(
@@ -197,6 +235,11 @@ def edit_search_submit(
             intervalle_minutes=intervalle_minutes,
             webhook_url=webhook.strip() or None,
             actif=(actif == "true"),
+            terme_obligatoire=terme_obligatoire.strip() or None,
+            termes_optionnels=parse_termes_optionnels(termes_optionnels),
+            etats=etats,
+            marque=_marque_depuis_formulaire(marque, sans_marque),
+            taille=taille.strip() or None,
         )
         return _redirect_with_flash("/", f"Recherche '{nom}' mise a jour.")
     except ValueError as exc:

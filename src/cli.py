@@ -6,11 +6,15 @@ import argparse
 
 from .notifier import mask_webhook_url
 from .searches import (
+    ETATS_VINTED,
+    SANS_MARQUE,
     add_search,
     add_search_from_url,
     load_searches,
+    parse_termes_optionnels,
     remove_search,
     set_active,
+    summarize_criteres_texte,
     summarize_filtres,
 )
 
@@ -18,6 +22,7 @@ CLI_COMMANDS = {"add", "add-url", "list", "enable", "disable", "remove"}
 
 
 def handle_add(args: argparse.Namespace) -> None:
+    marque = SANS_MARQUE if args.sans_marque else args.marque
     search = add_search(
         nom=args.nom,
         mots_cles=args.mots_cles,
@@ -26,8 +31,16 @@ def handle_add(args: argparse.Namespace) -> None:
         devise=args.devise,
         intervalle_minutes=args.intervalle_minutes,
         webhook_url=args.webhook,
+        terme_obligatoire=args.terme_obligatoire,
+        termes_optionnels=parse_termes_optionnels(args.termes_optionnels or ""),
+        etats=args.etats or [],
+        marque=marque,
+        taille=args.taille,
     )
     print(f"Recherche ajoutee : {search.id} ({search.nom})")
+    criteres = summarize_criteres_texte(search)
+    if criteres:
+        print(f"Criteres texte : {criteres}")
 
 
 def handle_add_url(args: argparse.Namespace) -> None:
@@ -70,6 +83,9 @@ def handle_list(args: argparse.Namespace) -> None:
         filtres = summarize_filtres(s.filtres_bruts)
         if filtres:
             ligne += f" - filtres: {filtres}"
+        criteres = summarize_criteres_texte(s)
+        if criteres:
+            ligne += f" - criteres texte: {criteres}"
         print(ligne)
 
 
@@ -106,6 +122,33 @@ def build_parser() -> argparse.ArgumentParser:
     p_add.add_argument(
         "--webhook", default=None, help="Webhook Discord dedie (sinon le webhook global de .env)"
     )
+    p_add.add_argument(
+        "--terme-obligatoire",
+        dest="terme_obligatoire",
+        default=None,
+        help="Doit apparaitre dans le titre de l'annonce (insensible a la casse/accents)",
+    )
+    p_add.add_argument(
+        "--termes-optionnels",
+        dest="termes_optionnels",
+        default="",
+        help="Mots indicatifs separes par des virgules (n'excluent aucune annonce)",
+    )
+    p_add.add_argument(
+        "--etat",
+        dest="etats",
+        action="append",
+        choices=ETATS_VINTED,
+        help="Etat accepte (repetable pour en accepter plusieurs)",
+    )
+    p_add.add_argument("--marque", default=None, help="Marque recherchee (texte libre)")
+    p_add.add_argument(
+        "--sans-marque",
+        dest="sans_marque",
+        action="store_true",
+        help="Cible les annonces sans marque renseignee (ignore --marque)",
+    )
+    p_add.add_argument("--taille", default=None, help="Taille / format recherche (texte libre)")
     p_add.set_defaults(func=handle_add)
 
     p_add_url = subparsers.add_parser(

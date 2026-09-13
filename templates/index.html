@@ -5,11 +5,13 @@
 
 <div class="carte">
   {% if recherches %}
+  <div class="table-scroll">
   <table>
     <thead>
       <tr>
         <th>Nom</th>
         <th>Mots-cles / filtres</th>
+        <th>Criteres texte</th>
         <th>Prix</th>
         <th>Intervalle</th>
         <th>Webhook</th>
@@ -26,6 +28,7 @@
           '{{ r.search.mots_cles or '(aucun)' }}'
           {% if r.filtres_resume %}<br><span class="filtres-resume">{{ r.filtres_resume }}</span>{% endif %}
         </td>
+        <td>{{ r.criteres_texte or "(aucun)" }}</td>
         <td>
           {% if r.search.prix_min %}{{ r.search.prix_min }} {% endif %}
           {% if r.search.prix_max %}- {{ r.search.prix_max }}{% endif %}
@@ -33,12 +36,12 @@
           {{ r.search.devise }}
         </td>
         <td>{{ r.search.intervalle_minutes }} min</td>
-        <td>{{ r.webhook_masque }}</td>
+        <td class="casse-mot">{{ r.webhook_masque }}</td>
         <td>
           {% if r.search.actif %}<span class="badge badge-actif">actif</span>
           {% else %}<span class="badge badge-inactif">inactif</span>{% endif %}
         </td>
-        <td>{{ r.derniere_activite or "jamais verifiee" }}</td>
+        <td class="casse-mot">{{ r.derniere_activite or "jamais verifiee" }}</td>
         <td>
           <div class="actions">
             <a class="btn btn-petit" href="/searches/{{ r.search.id }}/edit">Modifier</a>
@@ -52,6 +55,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
   {% else %}
   <p>Aucune recherche pour l'instant. <a href="/searches/new">Ajoutes-en une</a>.</p>
   {% endif %}

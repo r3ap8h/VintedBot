@@ -35,6 +35,29 @@
     <p class="filtres-resume">{{ filtres_resume }}</p>
     {% endif %}
 
+    <h2 style="margin-top:24px;">Criteres texte (optionnels)</h2>
+    <p class="aide">Filtres appliques sur les annonces recues, sans passer par des ids Vinted non documentes.</p>
+
+    <label for="terme_obligatoire">Terme obligatoire (doit apparaitre dans le titre)</label>
+    <input type="text" id="terme_obligatoire" name="terme_obligatoire" value="{{ search.terme_obligatoire or '' }}">
+
+    <label for="termes_optionnels">Termes optionnels (separes par une virgule, indicatifs uniquement)</label>
+    <input type="text" id="termes_optionnels" name="termes_optionnels" placeholder="ex: rouge, taille m" value="{{ termes_optionnels_str }}">
+
+    <label>Etat (laisser tout decoche = tous les etats)</label>
+    <div class="cases">
+      {% for etat in etats_vinted %}
+      <label class="case"><input type="checkbox" name="etats" value="{{ etat }}" {{ "checked" if etat in search.etats else "" }}> {{ etat }}</label>
+      {% endfor %}
+    </div>
+
+    <label for="marque">Marque (texte libre)</label>
+    <input type="text" id="marque" name="marque" value="{{ '' if sans_marque_coche else (search.marque or '') }}">
+    <label class="case"><input type="checkbox" name="sans_marque" value="1" {{ "checked" if sans_marque_coche else "" }}> Cibler "Sans marque" (ignore le champ marque ci-dessus)</label>
+
+    <label for="taille">Taille / format (texte libre)</label>
+    <input type="text" id="taille" name="taille" value="{{ search.taille or '' }}">
+
     <p style="margin-top:20px; display:flex; gap:8px;">
       <button class="btn btn-accent" type="submit">Enregistrer</button>
       <a class="btn" href="/">Annuler</a>

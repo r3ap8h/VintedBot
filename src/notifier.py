@@ -37,12 +37,27 @@ class Notifier(ABC):
         """
 
 
+_MAX_PHOTOS_GALERIE = 4  # 1 embed principal + jusqu'a 3 embeds photo supplementaires
+
+
 class DiscordNotifier(Notifier):
     def __init__(self, webhook_url: str) -> None:
         self.webhook_url = webhook_url
 
     def notify(self, item: VintedItem, search_nom: str) -> bool:
-        fields = []
+        fields = [
+            {"name": "Prix demande", "value": f"{item.price:.2f} {item.currency}", "inline": True},
+        ]
+        # total_item_price (prix + protection acheteur) n'est affiche que si l'API
+        # l'a bien fourni pour cette annonce : jamais de calcul approximatif invente.
+        if item.total_price is not None:
+            fields.append(
+                {
+                    "name": "Prix total (protection acheteur)",
+                    "value": f"{item.total_price:.2f} {item.total_currency or item.currency}",
+                    "inline": True,
+                }
+            )
         if item.brand:
             fields.append({"name": "Marque", "value": item.brand, "inline": True})
         if item.size:
@@ -58,13 +73,38 @@ class DiscordNotifier(Notifier):
             "fields": fields,
             "footer": {"text": f"Recherche : {search_nom}"},
         }
-        if item.photo_url:
-            embed["thumbnail"] = {"url": item.photo_url}
+        photos = item.photos or ([item.photo_url] if item.photo_url else [])
+        if photos:
+            embed["image"] = {"url": photos[0]}
 
-        payload = {"embeds": [embed]}
+        # Plusieurs embeds partageant le meme `url` sont regroupes par Discord en une
+        # galerie d'images cliquable dans un seul message.
+        embeds = [embed]
+        for photo_url in photos[1:_MAX_PHOTOS_GALERIE]:
+            embeds.append({"url": item.url, "image": {"url": photo_url}})
+
+        payload: dict = {"embeds": embeds}
+
+        webhook_url = self.webhook_url
+        if item.url:
+            payload["components"] = [
+                {
+                    "type": 1,
+                    "components": [
+                        {
+                            "type": 2,
+                            "style": 5,
+                            "label": "Voir l'annonce sur Vinted",
+                            "url": item.url,
+                        }
+                    ],
+                }
+            ]
+            separateur = "&" if "?" in webhook_url else "?"
+            webhook_url = f"{webhook_url}{separateur}with_components=true"
 
         try:
-            response = requests.post(self.webhook_url, json=payload, timeout=10)
+            response = requests.post(webhook_url, json=payload, timeout=10)
             response.raise_for_status()
             return True
         except requests.RequestException as exc:

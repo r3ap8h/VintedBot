@@ -5,3 +5,8 @@ __pycache__/
 
 data/*.db
 logs/*.log
+
+# Contient les recherches personnelles de l'utilisateur, y compris des
+# webhooks Discord dedies par recherche : ne doit jamais etre commite.
+# Voir config/searches.example.json pour un modele neutre.
+config/searches.json

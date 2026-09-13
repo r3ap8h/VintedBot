@@ -16,8 +16,9 @@ import logging
 import random
 import time
 
+from .filtres_texte import correspond
 from .notifier import DiscordNotifier, Notifier
-from .searches import DEFAULT_SEARCHES_PATH, Search, load_searches
+from .searches import DEFAULT_SEARCHES_PATH, Search, build_search_text, load_searches
 from .storage import is_new, is_search_known, mark_seen
 from .vinted_client import RateLimitError, VintedClient, VintedClientError
 
@@ -62,7 +63,7 @@ def check_search(
     """
     try:
         items = client.search(
-            mots_cles=search.mots_cles,
+            mots_cles=build_search_text(search),
             prix_min=search.prix_min,
             prix_max=search.prix_max,
             devise=search.devise,
@@ -85,12 +86,18 @@ def check_search(
             mark_seen(search.id, item)
         return
 
+    # Toutes les annonces nouvellement recues sont marquees vues (pour ne pas les
+    # ré-analyser au prochain passage), mais seules celles qui passent les criteres
+    # texte de la recherche (etat, marque, taille...) declenchent une notification.
     nouveautes = [item for item in items if is_new(search.id, item.id)]
     if nouveautes:
-        logger.info("%d nouvelle(s) annonce(s) pour '%s'.", len(nouveautes), search.nom)
-        notifier = _resolve_notifier(search, default_webhook_url, notifier_cache)
+        a_notifier = [item for item in nouveautes if correspond(item, search)]
+        if a_notifier:
+            logger.info("%d nouvelle(s) annonce(s) pour '%s'.", len(a_notifier), search.nom)
+            notifier = _resolve_notifier(search, default_webhook_url, notifier_cache)
+            for item in a_notifier:
+                notifier.notify(item, search.nom)
         for item in nouveautes:
-            notifier.notify(item, search.nom)
             mark_seen(search.id, item)
 
 
